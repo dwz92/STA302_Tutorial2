@@ -1,0 +1,126 @@
+---
+title: "Tutorial 2"
+author: "Emma Teng"
+date: format(Sys.time(), "%d %m %Y")
+abstract: "This is paper studies the data from Neighbourhood Crime Rates on opendatatoronto, and provides a visualization of historical data."
+bibliography: bibliography.bib
+format: html
+---
+
+#Workplace Setup
+```{R}
+#### Preamble
+
+# Purpose: Read in data from the 2014 - 2023 Toronto Neighbourhood Crime Rates and make
+
+# a graph of the number of areas that each crimes are committed the most in 2023.
+
+# Author: Emma Teng
+
+# Email: e.teng\@utoronto.ca
+
+# Date: 12 January 2024
+
+# Prerequisites: Know where to get Toronto Neighbourhood Crime Rates.
+
+#### Workspace setup ####
+#install.packages("tidyverse")
+#install.packages("janitor")
+
+library(tidyverse)
+library(janitor)
+library(opendatatoronto)
+library(dplyr)
+library(ggplot2)
+```
+
+# Plan
+
+# Simulate
+```{r}
+#### Simulate ####
+set.seed(853)
+
+simulated_occupancy_data <-
+  tibble(
+    hoods = rep(1:158, each=9),
+    crime_type = rep(x=1:9, times=158),
+    crimes_committed = runif(n = 158 * 9, min = 0, max = 1000) |> floor()
+  )
+
+simulated_occupancy_data
+```
+In this simulation, we create a list of all the Toronto city area in 2023. We repeat that list 9 times to assume each type crime data from 158 hoods. To simulate the number of crimes per day, we makes a draw between 0 to 1000 crimes per type, while repeating it 9 * 158 times.
+
+# Acquire
+```{r}
+#### Acquire ####
+
+# get package
+package <- show_package("neighbourhood-crime-rates")
+package
+ 
+# get all resources for this package
+resources <- list_package_resources("neighbourhood-crime-rates")
+ 
+# identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+ 
+# load the first datastore resource as a sample
+toronto_crime <- filter(datastore_resources, row_number()==1) %>% get_resource()
+toronto_crime
+
+#Write to csv
+write_csv(
+  x = toronto_crime,
+  file = "toronto_crime.csv"
+)
+toronto_crime
+
+toronto_crime_clean <-
+  clean_names(toronto_crime) |>
+  select("area_name", "assault_2023", "autotheft_2023", "biketheft_2023", "breakenter_2023", "homicide_2023", "robbery_2023", "shooting_2023", "theftfrommv_2023", "theftover_2023"
+         )
+
+head(toronto_crime_clean)
+
+#Clean dataset
+write_csv(
+  x = toronto_crime_clean,
+  file = "cleaned_toronto_crimes.csv"
+)
+```
+
+# Explore
+```{r}
+#### Explore ####
+toronto_crime_clean <-
+  read_csv(
+    "cleaned_toronto_crimes.csv",
+    show_col_types = FALSE
+  )
+
+max_crime <- apply(toronto_crime_clean, 1, function(x) names(toronto_crime_clean)[which.max(x)])
+
+crimes=c("area_name", "assault_2023", "autotheft_2023", "biketheft_2023", "breakenter_2023", "homicide_2023", "robbery_2023", "shooting_2023", "theftfrommv_2023", "theftover_2023")
+
+#max_crime=factor(max_crime)
+
+#reference: https://stackoverflow.com/questions/55033475/find-count-of-elements-from-one-list-in-another-list
+
+new_toronto_crime_clean<-data.frame(crimes=crimes,max_crime=max_crime)
+
+new_toronto_crime_clean
+
+names(new_toronto_crime_clean)
+
+
+new_toronto_crime_clean |>
+  ggplot(aes(x = crimes)) +
+  geom_bar() +
+  labs(x = "Crimes", y = "Number of areas mostly committed")
+```
+
+# Share
+
+# References
